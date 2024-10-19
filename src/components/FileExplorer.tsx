@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Tree, Layout, Typography } from 'antd';
-import file12A18 from './assets/data/drive_structure_12A18.json';
-import file10A18 from './assets/data/drive_structure_10A18.json';
 import { FolderOutlined } from '@ant-design/icons';
 import { CustomImage } from './CustomImage';
 import { Img } from '../types/img';
