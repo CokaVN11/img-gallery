@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Button, Image, Tooltip, Typography } from 'antd';
+import { Button, Image, Skeleton, Tooltip, Typography } from 'antd';
 import { useParams } from 'react-router-dom';
 import { useInView } from 'react-intersection-observer';
 import localforage from 'localforage';
@@ -94,20 +94,37 @@ export const CustomImage: React.FC<{
 }> = ({ img }) => {
   const { id } = useParams<{ id: string }>();
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
   const { ref, inView } = useInView({
     triggerOnce: true,
     rootMargin: '200px 0px',
   });
 
   useEffect(() => {
-    if (inView) {
-      getImage(img).then(setThumbnailUrl);
-    }
+    const handleImage = async () => {
+      if (inView) {
+        try {
+          setLoading(true);
+          const imgUrl = await getImage(img);
+          setThumbnailUrl(imgUrl);
+          setLoading(false);
+        } catch (err) {
+          console.error('Error fetching image:', err);
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+    handleImage();
   }, [inView, img]);
 
   const renderContent = () => {
     const imageFormats = ['jpeg', 'jpg', 'png', 'heic'];
     const videoFormats = ['mov', 'mp4'];
+
+    if (loading) {
+      return <Skeleton.Image active={true} />;
+    }
 
     if (imageFormats.includes(img.format.toLowerCase())) {
       return (
@@ -166,6 +183,7 @@ export const CustomImage: React.FC<{
       className={`border rounded-lg min-w-[12rem] max-w-[12rem] h-full ${
         id === img.driveId ? 'border-red-500 bg-red-200' : 'border-gray-300'
       }`}
+      style={{ transition: 'all 0.3s', opacity: loading ? 0.5 : 1 }}
     >
       {renderContent()}
 

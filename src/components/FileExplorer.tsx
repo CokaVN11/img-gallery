@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Tree, Layout, Typography } from 'antd';
-import { FolderOutlined } from '@ant-design/icons';
+import { Tree, Layout, Typography, Button, Drawer, Spin, Skeleton } from 'antd';
+import { FolderOutlined, MenuOutlined } from '@ant-design/icons';
 import { CustomImage } from './CustomImage';
 import { Img } from '../types/img';
 import client from '../api/client';
+import { useMediaQuery } from 'react-responsive';
 
 const { Content, Sider } = Layout;
 const { Title } = Typography;
@@ -34,6 +35,12 @@ const FileExplorer: React.FC = () => {
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
   const folderRefs = useRef<Record<string, React.RefObject<HTMLDivElement>>>({});
 
+  const [drawerVisible, setDrawerVisible] = useState(false);
+  const isMobile = useMediaQuery({ query: '(max-width: 768px)' });
+
+  const [loading, setLoading] = useState(false);
+  const [loadingFiles, setLoadingFiles] = useState(false);
+
   useEffect(() => {
     fetchFolders();
   }, []);
@@ -46,12 +53,22 @@ const FileExplorer: React.FC = () => {
 
   const fetchFolders = async () => {
     try {
+      setLoading(true);
       const response = await client.get<Folder[]>('/folders');
       const folders = response.data;
       const treeNodes = buildTreeData(folders);
       setTreeData(treeNodes);
+
+      // Automatically select the first children folder of folders
+      if (treeNodes.length > 0 && treeNodes[0].children) {
+        const firstChild = treeNodes[0].children[0];
+        setSelectedFolder(firstChild.key);
+        fetchFiles(firstChild.key);
+      }
     } catch (error) {
       console.error('Error fetching folders:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -84,11 +101,14 @@ const FileExplorer: React.FC = () => {
   const fetchFiles = async (folderId: string) => {
     if (!folderContents[folderId]) {
       try {
+        setLoadingFiles(true);
         const response = await client.get<File[]>(`/files/folder/${folderId}`);
         const files = response.data;
         setFolderContents((prev) => ({ ...prev, [folderId]: files }));
       } catch (error) {
         console.error('Error fetching files:', error);
+      } finally {
+        setLoadingFiles(false);
       }
     }
   };
@@ -97,6 +117,9 @@ const FileExplorer: React.FC = () => {
     const key = selectedKeys[0] as string;
     setSelectedFolder(key);
     await fetchFiles(key);
+    if (isMobile) {
+      setDrawerVisible(false);
+    }
   };
 
   const scrollToFolder = (folderId: string) => {
@@ -106,33 +129,61 @@ const FileExplorer: React.FC = () => {
     }
   };
 
+  const renderSidebarContent = () => (
+    <Spin spinning={loading}>
+      <Tree showIcon defaultExpandAll onSelect={onSelect} treeData={treeData} />
+    </Spin>
+  );
+
   return (
     <Layout className="min-h-screen">
-      <Sider
-        width={300}
-        theme="light"
-        className="top-0 bottom-0 left-0 fixed overflow-auto"
-        style={{ height: '100vh', overflowY: 'auto' }}
-      >
-        <Title level={3} className="p-4">
-          File Explorer
-        </Title>
-        <Tree showIcon defaultExpandAll onSelect={onSelect} treeData={treeData} />
-      </Sider>
-      <Layout className="ml-[300px]">
+      {isMobile ? (
+        <Button
+          type="primary"
+          onClick={() => setDrawerVisible(true)}
+          icon={<MenuOutlined />}
+          className="top-4 left-4 fixed"
+        />
+      ) : (
+        <Sider width={300} theme="light" className="top-0 bottom-0 left-0 fixed overflow-y-auto">
+          <Title level={3} className="p-4">
+            File Explorer
+          </Title>
+          {renderSidebarContent()}
+        </Sider>
+      )}
+      <Layout className={isMobile ? 'ml-0' : 'ml-[300px]'}>
         <Content className="p-8">
-          {Object.entries(folderContents).map(([folderId, files]) => (
-            <div key={folderId} ref={(el) => (folderRefs.current[folderId] = { current: el })} className="mb-8">
-              <Title level={4}>{files[0]?.path.split('/').slice(-2, -1)[0]}</Title>
-              <div className="gap-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-                {files.map((file) => (
-                  <CustomImage key={file._id} img={file} />
-                ))}
-              </div>
+          {loadingFiles ? (
+            <div className="gap-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 mx-auto">
+              {[...Array(10)].map((_, index) => (
+                <Skeleton.Image key={index} active={true} />
+              ))}
             </div>
-          ))}
+          ) : (
+            Object.entries(folderContents).map(([folderId, files]) => (
+              <div key={folderId} ref={(el) => (folderRefs.current[folderId] = { current: el })} className="mb-8">
+                <Title level={4}>{files[0]?.path.split('/').slice(-2, -1)[0]}</Title>
+                <div className="gap-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 mx-auto">
+                  {files.map((file) => (
+                    <CustomImage key={file._id} img={file} />
+                  ))}
+                </div>
+              </div>
+            ))
+          )}
         </Content>
       </Layout>
+      <Drawer
+        title="File Explorer"
+        placement="left"
+        closable={false}
+        onClose={() => setDrawerVisible(false)}
+        open={drawerVisible}
+        width={300}
+      >
+        {renderSidebarContent()}
+      </Drawer>
     </Layout>
   );
 };
