@@ -3,13 +3,10 @@ import { Tree, Layout, Typography } from 'antd';
 import { FolderOutlined } from '@ant-design/icons';
 import { CustomImage } from './CustomImage';
 import { Img } from '../types/img';
+import client from '../api/client';
 
 const { Content, Sider } = Layout;
 const { Title } = Typography;
-
-interface FileExplorerProps {
-  data: Record<string, any>;
-}
 
 interface TreeNode {
   title: string;
@@ -18,59 +15,94 @@ interface TreeNode {
   children?: TreeNode[];
 }
 
-interface FolderContent {
+interface Folder {
+  _id: string;
   name: string;
-  images: Img[];
+  parentId: string | null;
+  path: string;
 }
 
-const FileExplorer: React.FC<FileExplorerProps> = ({ data }) => {
+interface File extends Img {
+  _id: string;
+  folderId: string;
+  path: string;
+}
+
+const FileExplorer: React.FC = () => {
   const [treeData, setTreeData] = useState<TreeNode[]>([]);
-  const [folderContents, setFolderContents] = useState<Record<string, FolderContent>>({});
-  const folderRefs = useRef<{ [key: string]: React.RefObject<HTMLDivElement> }>({});
+  const [folderContents, setFolderContents] = useState<Record<string, File[]>>({});
+  const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
+  const folderRefs = useRef<Record<string, React.RefObject<HTMLDivElement>>>({});
 
   useEffect(() => {
-    const { treeNodes, contents } = processData(data);
-    setTreeData(treeNodes);
-    setFolderContents(contents);
-  }, [data]);
+    fetchFolders();
+  }, []);
 
-  const processData = (
-    data: Record<string, any>,
-    parentKey = '',
-    parentName = 'Root'
-  ): { treeNodes: TreeNode[]; contents: Record<string, FolderContent> } => {
-    const treeNodes: TreeNode[] = [];
-    const contents: Record<string, FolderContent> = {};
+  useEffect(() => {
+    if (selectedFolder && folderContents[selectedFolder]) {
+      scrollToFolder(selectedFolder);
+    }
+  }, [selectedFolder, folderContents]);
 
-    Object.entries(data).forEach(([key, value]) => {
-      const currentKey = parentKey ? `${parentKey}-${key}` : key;
+  const fetchFolders = async () => {
+    try {
+      const response = await client.get<Folder[]>('/folders');
+      const folders = response.data;
+      const treeNodes = buildTreeData(folders);
+      setTreeData(treeNodes);
+    } catch (error) {
+      console.error('Error fetching folders:', error);
+    }
+  };
 
-      if (value.type === 'folder') {
-        const { treeNodes: childNodes, contents: childContents } = processData(value.children, currentKey, value.name);
-        treeNodes.push({
-          title: value.name,
-          key: currentKey,
-          icon: <FolderOutlined />,
-          children: childNodes,
-        });
-        Object.assign(contents, childContents);
-      } else if (value.type === 'image' || value.type === 'video') {
-        const folderKey = parentKey || 'root';
-        if (!contents[folderKey]) {
-          contents[folderKey] = { name: parentName, images: [] };
+  const buildTreeData = (folders: Folder[]): TreeNode[] => {
+    const folderMap: Record<string, TreeNode> = {};
+    const rootNodes: TreeNode[] = [];
+
+    folders.forEach((folder) => {
+      const node: TreeNode = {
+        title: folder.name,
+        key: folder._id,
+        icon: <FolderOutlined />,
+        children: [],
+      };
+      folderMap[folder._id] = node;
+
+      if (folder.parentId) {
+        const parent = folderMap[folder.parentId];
+        if (parent) {
+          parent.children!.push(node);
         }
-        contents[folderKey].images.push({ id: key, ...value });
+      } else {
+        rootNodes.push(node);
       }
     });
 
-    return { treeNodes, contents };
+    return rootNodes;
   };
 
-  const onSelect = (selectedKeys: React.Key[]) => {
+  const fetchFiles = async (folderId: string) => {
+    if (!folderContents[folderId]) {
+      try {
+        const response = await client.get<File[]>(`/files/folder/${folderId}`);
+        const files = response.data;
+        setFolderContents((prev) => ({ ...prev, [folderId]: files }));
+      } catch (error) {
+        console.error('Error fetching files:', error);
+      }
+    }
+  };
+
+  const onSelect = async (selectedKeys: React.Key[]) => {
     const key = selectedKeys[0] as string;
-    const ref = folderRefs.current[key];
+    setSelectedFolder(key);
+    await fetchFiles(key);
+  };
+
+  const scrollToFolder = (folderId: string) => {
+    const ref = folderRefs.current[folderId];
     if (ref?.current) {
-      ref.current.scrollIntoView({ behavior: 'smooth' });
+      ref.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   };
 
@@ -89,12 +121,12 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ data }) => {
       </Sider>
       <Layout className="ml-[300px]">
         <Content className="p-8">
-          {Object.entries(folderContents).map(([folderKey, folder]) => (
-            <div key={folderKey} ref={(folderRefs.current[folderKey] = React.createRef())}>
-              <Title level={4}>{folder.name}</Title>
+          {Object.entries(folderContents).map(([folderId, files]) => (
+            <div key={folderId} ref={(el) => (folderRefs.current[folderId] = { current: el })} className="mb-8">
+              <Title level={4}>{files[0]?.path.split('/').slice(-2, -1)[0]}</Title>
               <div className="gap-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-                {folder.images.map((img) => (
-                  <CustomImage key={img.id} img={img} />
+                {files.map((file) => (
+                  <CustomImage key={file._id} img={file} />
                 ))}
               </div>
             </div>

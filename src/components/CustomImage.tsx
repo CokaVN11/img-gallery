@@ -78,12 +78,12 @@ const getImage = async (img: Img) => {
     case 'jpeg':
     case 'jpg':
     case 'png':
-      return getJpegOrPngImage(img.id, img.format);
+      return getJpegOrPngImage(img.driveId, img.format);
     case 'heic':
-      return getHeicImage(img.id);
+      return getHeicImage(img.driveId);
     case 'mov':
     case 'mp4':
-      return getVideoThumbnail(img.id, img.format);
+      return getVideoThumbnail(img.driveId, img.format);
     default:
       return null;
   }
@@ -116,7 +116,7 @@ export const CustomImage: React.FC<{
           alt={img.name}
           className="rounded-t-lg object-contain"
           preview={{
-            src: `https://lh3.googleusercontent.com/d/${img.id}`,
+            src: `https://lh3.googleusercontent.com/d/${img.driveId}`,
           }}
           loading="lazy"
           placeholder={<div className="bg-gray-300 w-full h-40 animate-pulse" />}
@@ -125,7 +125,7 @@ export const CustomImage: React.FC<{
     } else if (videoFormats.includes(img.format.toLowerCase())) {
       return (
         <video
-          src={`https://drive.google.com/uc?export=download&id=${img.id}`}
+          src={`https://drive.google.com/uc?export=download&id=${img.driveId}`}
           poster={thumbnailUrl as string}
           controls
           className="rounded-t-lg w-full h-40 object-contain"
@@ -144,7 +144,7 @@ export const CustomImage: React.FC<{
   };
 
   const handleDownload = async () => {
-    const response = await fetch(`https://drive.google.com/uc?export=download&id=${img.id}`);
+    const response = await fetch(`https://drive.google.com/uc?export=download&id=${img.driveId}`);
     const blob = await response.blob();
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -157,14 +157,14 @@ export const CustomImage: React.FC<{
   };
 
   const handleOpenInDrive = () => {
-    window.open(`https://drive.google.com/file/d/${img.id}/view`, '_blank');
+    window.open(`https://drive.google.com/file/d/${img.driveId}/view`, '_blank');
   };
 
   return (
     <div
       ref={ref}
       className={`border rounded-lg min-w-[12rem] max-w-[12rem] h-full ${
-        id === img.id ? 'border-red-500 bg-red-200' : 'border-gray-300'
+        id === img.driveId ? 'border-red-500 bg-red-200' : 'border-gray-300'
       }`}
     >
       {renderContent()}
