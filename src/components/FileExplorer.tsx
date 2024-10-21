@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Tree, Layout, Typography, Button, Drawer, Spin, Skeleton } from 'antd';
 import { FolderOutlined, MenuOutlined } from '@ant-design/icons';
-import { CustomImage } from './CustomImage';
 import { Img } from '../types/img';
 import client from '../api/client';
 import { useMediaQuery } from 'react-responsive';
