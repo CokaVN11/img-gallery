@@ -131,7 +131,7 @@ export const CustomImage: React.FC<{
         <Image
           src={thumbnailUrl as string}
           alt={img.name}
-          className="rounded-t-lg object-contain"
+          className="rounded-t-lg object-cover"
           preview={{
             src: `https://lh3.googleusercontent.com/d/${img.driveId}`,
           }}
@@ -145,7 +145,7 @@ export const CustomImage: React.FC<{
           src={`https://drive.google.com/uc?export=download&id=${img.driveId}`}
           poster={thumbnailUrl as string}
           controls
-          className="rounded-t-lg w-full h-40 object-contain"
+          className="rounded-t-lg w-full h-40 object-cover"
         >
           <track kind="captions" />
           Your browser does not support the video tag.
@@ -178,26 +178,27 @@ export const CustomImage: React.FC<{
   };
 
   return (
-    <div
-      ref={ref}
-      className={`border rounded-lg min-w-[12rem] max-w-[12rem] h-full ${
-        id === img.driveId ? 'border-red-500 bg-red-200' : 'border-gray-300'
-      }`}
-      style={{ transition: 'all 0.3s', opacity: loading ? 0.5 : 1 }}
-    >
-      {renderContent()}
+    <div ref={ref} className="p-2 w-full sm:w-1/2 md:w-1/3 lg:w-1/4 xl:w-1/5">
+      <div
+        className={`border rounded-lg h-full overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300 ${
+          id === img.driveId ? 'border-red-500 bg-red-200' : 'border-gray-300'
+        }`}
+        style={{ transition: 'all 0.3s', opacity: loading ? 0.5 : 1 }}
+      >
+        {renderContent()}
 
-      <div className="bg-slate-200 m-2 px-4 py-1 rounded-md">
-        <Paragraph ellipsis={{ rows: 2 }} className="mb-2 text-center">
-          {img.name}
-        </Paragraph>
-        <div className="flex justify-center space-x-2">
-          <Tooltip title="Download">
-            <Button icon={<DownloadOutlined />} onClick={handleDownload} size="small" />
-          </Tooltip>
-          <Tooltip title="Open in Drive">
-            <Button icon={<FolderOpenOutlined />} onClick={handleOpenInDrive} size="small" />
-          </Tooltip>
+        <div className="bg-slate-200 m-2 px-4 py-1 rounded-md">
+          <Paragraph ellipsis={{ rows: 2 }} className="mb-2 text-center">
+            {img.name}
+          </Paragraph>
+          <div className="flex justify-center space-x-2">
+            <Tooltip title="Download">
+              <Button icon={<DownloadOutlined />} onClick={handleDownload} size="small" />
+            </Tooltip>
+            <Tooltip title="Open in Drive">
+              <Button icon={<FolderOpenOutlined />} onClick={handleOpenInDrive} size="small" />
+            </Tooltip>
+          </div>
         </div>
       </div>
     </div>
