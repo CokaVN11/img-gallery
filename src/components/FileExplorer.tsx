@@ -5,6 +5,7 @@ import { CustomImage } from './CustomImage';
 import { Img } from '../types/img';
 import client from '../api/client';
 import { useMediaQuery } from 'react-responsive';
+import Gallery from './Gallery';
 
 const { Content, Sider } = Layout;
 const { Title } = Typography;
@@ -164,11 +165,7 @@ const FileExplorer: React.FC = () => {
             Object.entries(folderContents).map(([folderId, files]) => (
               <div key={folderId} ref={(el) => (folderRefs.current[folderId] = { current: el })} className="mb-8">
                 <Title level={4}>{files[0]?.path.split('/').slice(-2, -1)[0]}</Title>
-                <div className="gap-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 mx-auto">
-                  {files.map((file) => (
-                    <CustomImage key={file._id} img={file} />
-                  ))}
-                </div>
+                <Gallery images={files} />
               </div>
             ))
           )}
